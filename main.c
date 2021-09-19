@@ -76,24 +76,20 @@ int main (void)
 
 void blas_dgemm(int M, int N, int K, double *A, double *B, double *C, double alpha, double beta)
 {
-#pragma omp parallel num_threads(THREADS)
-    {
-#pragma omp for
-        for(int z=0; z<N; z++)
-            for(int j=0; j<K; j++)
-            {
-                double sum = 0;
-                for(int i=0; i<M; i++)
-                    sum += A[z*M+i]*B[i*K+j];
-                C[z*K+j] = beta*C[z*K+j] + alpha*sum;
-            }
-    }
+    #pragma omp parallel num_threads(THREADS)
+    #pragma omp for
+    for(int z=0; z<N; z++)
+        for(int j=0; j<K; j++){
+            double sum = 0;
+            for(int i=0; i<M; i++)
+                sum += A[z*M+i]*B[i*K+j];
+            C[z*K+j] = beta*C[z*K+j] + alpha*sum;
+        }
 }
 
 void print_matrix(int num_col, int num_rows, double *matrix)
 {
-    for(int i=0; i<num_rows; i++)
-    {
+    for(int i=0; i<num_rows; i++){
         for(int j=0; j<num_col; j++)
             printf("%5.2f \t", matrix[i*num_col +j]);
         printf("\n");
@@ -102,22 +98,19 @@ void print_matrix(int num_col, int num_rows, double *matrix)
 
 void generate_matrix(int num_col, int num_rows, double *matrix)
 {
-#pragma omp parallel num_threads(THREADS)
-    {
-#pragma omp for
-        for(int i=0; i<num_col; i++)
-            for(int j=0; j<num_rows; j++)
-                matrix[i*num_rows +j] = (MIN_NUM + rand()%(MAX_NUM-MIN_NUM+1))/100.0;
-    }
+    #pragma omp parallel num_threads(THREADS)
+    #pragma omp for
+    for(int i=0; i<num_col; i++)
+        for(int j=0; j<num_rows; j++)
+            matrix[i*num_rows +j] = (MIN_NUM + rand()%(MAX_NUM-MIN_NUM+1))/100.0;
 }
 
 void save_matrix_to_file(int num_col, int num_rows, double *matrix)
 {
     FILE *file = fopen("matrix.txt", "w");
+    
     for (int i = 0; i < num_col*num_rows; i++)
-    {
         fprintf(file, "%.2f ", matrix[i]);
-    }
 
     fclose(file);
 }
