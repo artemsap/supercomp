@@ -5,19 +5,22 @@
 #include <time.h>
 
 #define THREADS 10
-#define MAX_NUM 1000
-#define MIN_NUM -1000
-#define MAX_SIZE_MATRIX 500
+#define MAX_NUM 10000
+#define MIN_NUM -10000
+#define MAX_SIZE_MATRIX 5
 
-void blas_dgemm(int M, int N, int K, double *A, double *B, double *C);
+void blas_dgemm(int M, int N, int K, double *A, double *B, double *C, double alpha, double beta);
 void print_matrix(int num_col, int num_rows, double *matrix);
 void generate_matrix(int num_col, int num_rows, double *matrix);
+void save_matrix_to_file(int num_col, int num_rows, double *matrix);
 
 int main (void)
 {  
+    srand(time(0));
+
     int M = rand()%MAX_SIZE_MATRIX + 1; //Number of columns in A matrix and rows in B matrix
     int N = rand()%MAX_SIZE_MATRIX + 1; //Number of rows in A matrix
-    int K = rand()%MAX_SIZE_MATRIX + 1; //Number of columns in A matrix
+    int K = rand()%MAX_SIZE_MATRIX + 1; //Number of columns in B matrix
 
     double *A = malloc(sizeof(double)*M*N);
     double *B = malloc(sizeof(double)*M*K);
@@ -42,7 +45,7 @@ int main (void)
     start = clock();
 
     // Matrix multiplications
-    blas_dgemm(M, N, K, A, B, C);
+    blas_dgemm(M, N, K, A, B, C, 1, 0);
 
     // Time after matrix multiplication
     end = clock();
@@ -53,6 +56,17 @@ int main (void)
     printf("Time of matrix generation=%f \n", t1);
     printf("Time of matrix multiplication=%f \n", t);
 
+    printf("Matrix A\n");
+    print_matrix(M, N, A);
+
+    printf("Matrix B\n");
+    print_matrix(K, M, B);
+
+    printf("Matrix C\n");
+    print_matrix(K, N, C);
+
+    save_matrix_to_file(N, K, C);
+
     free(A);
     free(B);
     free(C);
@@ -60,15 +74,19 @@ int main (void)
     return 0;
 }
 
-void blas_dgemm(int M, int N, int K, double *A, double *B, double *C)
+void blas_dgemm(int M, int N, int K, double *A, double *B, double *C, double alpha, double beta)
 {
 #pragma omp parallel num_threads(THREADS)
     {
 #pragma omp for
         for(int z=0; z<N; z++)
             for(int j=0; j<K; j++)
+            {
+                double sum = 0;
                 for(int i=0; i<M; i++)
-                    C[z*K+j] += A[z*M+i]*B[i*K+j];
+                    sum += A[z*M+i]*B[i*K+j];
+                C[z*K+j] = beta*C[z*K+j] + alpha*sum;
+            }
     }
 }
 
@@ -91,4 +109,15 @@ void generate_matrix(int num_col, int num_rows, double *matrix)
             for(int j=0; j<num_rows; j++)
                 matrix[i*num_rows +j] = (MIN_NUM + rand()%(MAX_NUM-MIN_NUM+1))/100.0;
     }
+}
+
+void save_matrix_to_file(int num_col, int num_rows, double *matrix)
+{
+    FILE *file = fopen("matrix.txt", "w");
+    for (int i = 0; i < num_col*num_rows; i++)
+    {
+        fprintf(file, "%.2f ", matrix[i]);
+    }
+
+    fclose(file);
 }
